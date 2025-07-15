@@ -4,33 +4,49 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - main # Dieser Workflow wird ausgelöst, wenn Commits in den 'main'-Branch gepusht werden
-  workflow_dispatch: # Ermöglicht das manuelle Auslösen des Workflows
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: read # Standardmäßig Lesezugriff
-  pages: write   # Erlaubt dem Workflow, in den 'gh-pages' Branch zu schreiben
-  id-token: write # Erforderlich für OIDC-Authentifizierung (standardmäßig für GitHub Pages)
+  contents: read
+  # Wenn du dein eigenes GIT_TOKEN verwendest, könntest du 'pages: write' entfernen,
+  # aber es ist besser, es zu behalten und das GIT_TOKEN nur für spezifische Fälle zu nutzen.
+  # Hier nur für die Demonstration, dass es ohne 'id-token' oder 'pages: write' ginge.
+  # Wenn du ein PAT verwendest, musst du dem PAT die richtigen Scopes geben (z.B. repo).
+  # pages: write
+  # id-token: write
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # Der Runner, auf dem der Workflow ausgeführt wird
+    runs-on: ubuntu-latest
     environment:
-      name: github-pages    # Definiert eine Deployment-Umgebung (optional, aber empfohlen)
-      url: ${{ steps.deployment.outputs.page_url }} # Die URL der bereitgestellten Seite
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout # Den Repository-Code auschecken
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Hier wird das Token verwendet, um den Checkout mit höheren Berechtigungen durchzuführen.
+          # Dies ist oft bei privaten Repositories oder Submodulen nötig.
+          token: ${{ secrets.GIT_TOKEN }}
 
-      - name: Setup Pages # GitHub Pages Umgebung vorbereiten
+      - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact # Den Inhalt des Repositories als Artefakt hochladen
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: '.' # Der Pfad zu deinen statischen Dateien (hier das Root-Verzeichnis)
+          path: '.'
 
-      - name: Deploy to GitHub Pages # Das Artefakt auf GitHub Pages bereitstellen
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Custom Deploy (NOT RECOMMENDED for Pages, just for demo)
+        if: success() # Only run if previous steps succeeded
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GIT_TOKEN }}@github.com/${{ github.repository }}.git"
+          # Beispiel: Dateien in den gh-pages Branch pushen
+          git checkout -B gh-pages
+          git add .
+          git commit -m "Deploy to GitHub Pages" || echo "No changes to commit"
+          git push origin gh-pages
