@@ -1,0 +1,36 @@
+# .github/workflows/deploy-pages.yml
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Dieser Workflow wird ausgelöst, wenn Commits in den 'main'-Branch gepusht werden
+  workflow_dispatch: # Ermöglicht das manuelle Auslösen des Workflows
+
+permissions:
+  contents: read # Standardmäßig Lesezugriff
+  pages: write   # Erlaubt dem Workflow, in den 'gh-pages' Branch zu schreiben
+  id-token: write # Erforderlich für OIDC-Authentifizierung (standardmäßig für GitHub Pages)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # Der Runner, auf dem der Workflow ausgeführt wird
+    environment:
+      name: github-pages    # Definiert eine Deployment-Umgebung (optional, aber empfohlen)
+      url: ${{ steps.deployment.outputs.page_url }} # Die URL der bereitgestellten Seite
+
+    steps:
+      - name: Checkout # Den Repository-Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Setup Pages # GitHub Pages Umgebung vorbereiten
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact # Den Inhalt des Repositories als Artefakt hochladen
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: '.' # Der Pfad zu deinen statischen Dateien (hier das Root-Verzeichnis)
+
+      - name: Deploy to GitHub Pages # Das Artefakt auf GitHub Pages bereitstellen
+        id: deployment
+        uses: actions/deploy-pages@v4
